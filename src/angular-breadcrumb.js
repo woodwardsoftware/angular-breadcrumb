@@ -107,6 +107,38 @@ function $Breadcrumb() {
             return $q.when($$parentState(conf));
         };
 
+        function registerLabelWatchers(labelWatcherArray, step, viewScope, labelScope) {
+            var updateLabel = function (labelDefinition) {
+                var locals = getLastViewLocals();
+                if (labelDefinition) {
+                    var type = Object.prototype.toString.call(labelDefinition.ncyBreadcrumb.label);
+                    if (type === '[object Function]' ||
+                        type === '[object Array]') {
+                        $q.when($injector.invoke(labelDefinition, null, locals)).then(function (label) {
+                            labelScope.ncyBreadcrumbLabel = label;
+                        });
+                    } else {
+                        var parseLabel = $interpolate(labelDefinition);
+                        labelScope.ncyBreadcrumbLabel = parseLabel(viewScope);
+                    }
+                } else {
+                    labelScope.ncyBreadcrumbLabel = step.name;
+                }
+            };
+
+            var watcher = viewScope.$watch(function () {
+                return step.ncyBreadcrumb && step.ncyBreadcrumb.label;
+            }, updateLabel);
+
+            labelWatcherArray.push(watcher);
+        }
+
+        function deregisterLabelWatchers(labelWatcherArray) {
+            angular.forEach(labelWatcherArray, function (deregisterWatch) {
+                deregisterWatch();
+            });
+        }
+
         function getLastViewLocals() {
             var state = $state.$current,
                 views = countKeys(state.views);
@@ -218,7 +250,11 @@ function $Breadcrumb() {
 
             $getLastViewScope: getLastViewScope,
 
-            $getLastViewLocals: getLastViewLocals
+            $getLastViewLocals: getLastViewLocals,
+
+            $registerLabelWatchers: registerLabelWatchers,
+
+            $deregisterLabelWatchers: deregisterLabelWatchers
         };
     }];
 }
